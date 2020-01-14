@@ -1,24 +1,26 @@
 pragma solidity ^0.5.11;
 
 contract IoTSmartContacrt{
+    struct Device{
+        bytes32 deviceKey;                 //public key of the IoT device
+        bytes32 firmwareHash;             //firmware hash 
+    }
      struct Manager{
         string name;
-        bytes32 managerID;
-        Device[] devices;
+        bytes32 managerKey;
+        uint numdevices;
+        mapping(uint => Device) devices;
     }
-    struct Device{
-        address manager;
-        bytes32 deviceID;
-        bytes32 firmwareHash;
-    }
-    mapping(address => Manager) public ManagerAddress;
-    mapping (address => uint) public ManagerDeviceCount;
+    uint numManagers;
+    mapping(uint => Manager) managers;
 
-    function RegisterManager(string memory _name, bytes32 _id) public returns(address){
-        ManagerAddress[msg.sender].name = _name;
-        ManagerAddress[msg.sender].managerID = _id;
+    function RegisterManager(string memory _name, bytes32 _managerKey) public returns(uint managerID){
+        managerID = numManagers++;
+        managers[managerID] = Manager(_name, _managerKey,0);
     }
-    function RegisterDevice(bytes32 _identifier,address _manager, bytes32 firmwareHash) public returns(address){
-        
+    function RegisterDevices(bytes32 _deviceKey, bytes32 _firmwareHash, uint managerID) public returns (bool success){
+        Manager storage m = managers[managerID];
+        m.devices[m.numdevices++] = Device(_deviceKey,_firmwareHash);
+        return true;
     }
 }
