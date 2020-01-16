@@ -1,9 +1,15 @@
 pragma solidity ^0.5.11;
 
 contract IoTSmartContacrt{
+    struct Resource{
+        bytes32[] permissionDevice;
+    }
     struct Device{
         address owner;
         bytes32 deviceKey;
+        uint numResources;
+        bytes32[] resourceList;
+        mapping(bytes32 => Resource) resourceStruct;
     }
      struct Manager{
         string name;
@@ -14,6 +20,7 @@ contract IoTSmartContacrt{
     bytes32[] managerKeyList;
     mapping(bytes32 => Manager) managerStruct;
 
+   
     //adds the manager to manager list and creates a mapping data structure correspoding to each manager
     function RegisterManager(string memory _name, bytes32 _managerKey)public returns(bool success){
         managerStruct[_managerKey].name = _name;
@@ -21,11 +28,11 @@ contract IoTSmartContacrt{
         return true;
     }
     //returns the number of devices registered with each manager
-    function getDeviceCountofManager(bytes32 _managerKey) public view returns(string memory name, uint deviceCount){
+    function GetDeviceCountofManager(bytes32 _managerKey) public view returns(string memory name, uint deviceCount){
         return(managerStruct[_managerKey].name, managerStruct[_managerKey].deviceKeyList.length);
     }
     //returns the list of devicekeys registered with a particular manager corresponding to the managerKey
-    function getDeviceListofManager(bytes32 _managerKey) public view returns(bytes32[] memory){
+    function GetDeviceListofManager(bytes32 _managerKey) public view returns(bytes32[] memory){
         uint deviceCount = managerStruct[_managerKey].deviceKeyList.length;
         bytes32[] memory ret = new bytes32[](deviceCount);
         for(uint i = 0; i < deviceCount; i++){
@@ -41,18 +48,46 @@ contract IoTSmartContacrt{
         return true;
     }
 
+     function AddResourcesforDevice(bytes32 _managerKey, bytes32 _deviceKey, bytes32[] memory _resourceList)public returns(bool success){
+        uint resourceCount = _resourceList.length;
+        for(uint i = 0; i < resourceCount; i++){
+            managerStruct[_managerKey].deviceStruct[_deviceKey].numResources++;
+            managerStruct[_managerKey].deviceStruct[_deviceKey].resourceList.push(_resourceList[i]);
+        }
+        return true;
+    }
+    //functiont to add a permission for a device s1 to access resource r of device s2
+    function AddAccessControl(bytes32 _managerKey, bytes32 _permissionTo, bytes32 _permissionFrom, bytes32 _resourceName)public{
+        managerStruct[_managerKey].deviceStruct[_permissionFrom].resourceStruct[_resourceName].permissionDevice.push(_permissionTo);
+    }
+    //function to remove permission for a device s1 for a resource r of device s2
+    function RevokePermission(bytes32 _managerKey, bytes32 _permissionTo, bytes32 _permissionFrom, bytes32 _resourceName)public
+    returns(bytes32 deviceToBeRemoved){
+        uint deviceCount = managerStruct[_managerKey].deviceStruct[_permissionFrom].resourceStruct[_resourceName].permissionDevice.length;
+        uint index;
+        for(uint i = 0; i < deviceCount; i++){
+           if(_permissionTo == managerStruct[_managerKey].deviceStruct[_permissionFrom].resourceStruct[_resourceName].permissionDevice[i])
+               index = i;
+        }
+        deviceToBeRemoved = managerStruct[_managerKey].deviceStruct[_permissionFrom].resourceStruct[_resourceName].permissionDevice[index];
+        managerStruct[_managerKey].deviceStruct[_permissionFrom].resourceStruct[_resourceName].permissionDevice[index]
+          =managerStruct[_managerKey].deviceStruct[_permissionFrom].resourceStruct[_resourceName].permissionDevice[deviceCount-1];//last device replaced
+        delete(managerStruct[_managerKey].deviceStruct[_permissionFrom].resourceStruct[_resourceName].permissionDevice[deviceCount-1]);
+        managerStruct[_managerKey].deviceStruct[_permissionFrom].resourceStruct[_resourceName].permissionDevice.length--;
+    }
+
     function RemoveDevicefromManager(bytes32 _managerKey, bytes32 _deviceKey)public payable returns(bytes32 deviceToBeRemoved){
         uint deviceCount = managerStruct[_managerKey].deviceKeyList.length;
         uint index;
         for(uint i = 0; i < deviceCount; i++){
            if(_deviceKey == managerStruct[_managerKey].deviceKeyList[i])
-             index = i;
+               index = i;
         }
         deviceToBeRemoved = managerStruct[_managerKey].deviceKeyList[index];//device to be removed taken in variable
         managerStruct[_managerKey].deviceKeyList[index] = managerStruct[_managerKey].deviceKeyList[deviceCount-1];//last device replaced
-        delete managerStruct[_managerKey].deviceKeyList[deviceCount-1];
+        delete(managerStruct[_managerKey].deviceKeyList[deviceCount-1]);
         managerStruct[_managerKey].deviceKeyList.length--;
-        delete (managerStruct[_managerKey].deviceStruct[_deviceKey]);
+        delete(managerStruct[_managerKey].deviceStruct[_deviceKey]);
     }
 
     function RemoveManager(bytes32 _managerKey)public payable returns(bytes32 managerToBeRemoved){
@@ -64,8 +99,8 @@ contract IoTSmartContacrt{
         }
         managerToBeRemoved = managerKeyList[index];//manager to be removed taken in variable
         managerKeyList[index] = managerKeyList[managerCount-1];//last device replaced
-        delete managerKeyList[managerCount-1];
+        delete(managerKeyList[managerCount-1]);
         managerKeyList.length--;
-        delete (managerStruct[_managerKey]);
+        delete(managerStruct[_managerKey]);
     }
 }
